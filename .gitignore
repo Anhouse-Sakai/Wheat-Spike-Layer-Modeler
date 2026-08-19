@@ -1,1 +1,5 @@
 *.zip
+*.exe
+*.dll
+*.app/
+.DS_Store

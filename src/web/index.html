@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="按 PH、HSH、LSH 和三个穗带性状生成可导出的卡通小麦模型。" />
+  <title>小麦材料穗层建模器</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">WHEAT ARCHITECTURE STUDIO</p>
+        <h1 data-i18n="appTitle">小麦材料穗层建模器</h1>
+        <p class="intro" data-i18n="intro">把材料级表型数据变成结构可比较的单株小麦。所有分蘖共享一个冠部，各穗基部按所属穗带随机分布。</p>
+      </div>
+      <div class="hero-actions">
+        <label class="language-control"><span data-i18n="interfaceLanguage">界面语言</span><select id="languageSelect"><option value="zh">中文</option><option value="en">English</option></select></label>
+        <button id="exampleBtn" class="ghost" type="button" data-i18n="loadExample">载入示例</button>
+        <button id="randomizeBtn" class="ghost" type="button" data-i18n="randomize">换一组形态</button>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <aside class="control-panel" aria-label="模型参数">
+        <section class="plant-manager" aria-label="多植株管理">
+          <div class="section-heading">
+            <div><span class="step">00</span><h2 data-i18n="currentPlant">当前编辑植株</h2></div>
+            <span id="plantCount" class="unit-pill">1 / 1</span>
+          </div>
+          <label><span class="label-title" data-i18n="selectPlant">选择植株</span>
+            <select id="plantSelect" aria-label="选择要编辑的植株"></select>
+          </label>
+          <p class="section-note" data-i18n="plantHelp">先选择植株，再在下方修改它的 PH、HSH、LSH、各穗带参数和形态种子。</p>
+          <div class="plant-nav">
+            <button id="previousPlantBtn" class="ghost" type="button" data-i18n="previousPlant">上一株</button>
+            <button id="nextPlantBtn" class="ghost" type="button" data-i18n="nextPlant">下一株</button>
+            <button id="removePlantBtn" class="danger-ghost" type="button" data-i18n="removePlant">删除当前株</button>
+          </div>
+        </section>
+        <section class="model-cache" aria-label="模式小麦缓存">
+          <div class="section-heading">
+            <div><span class="step">C</span><h2 data-i18n="modelCache">模式小麦缓存</h2></div>
+            <span id="cacheCount" class="unit-pill">0</span>
+          </div>
+          <label><span class="label-title" data-i18n="savedModels">已暂存模式</span>
+            <select id="cacheSelect" aria-label="选择缓存模式小麦"></select>
+          </label>
+          <p class="section-note" data-i18n="cacheHelp">完整参数保存在当前浏览器中；刷新或重新打开页面后仍可载入。</p>
+          <div class="cache-actions">
+            <button id="saveCacheBtn" class="primary" type="button" data-i18n="saveCurrentModel">暂存当前株</button>
+            <button id="addCachedPlantBtn" class="ghost" type="button" data-i18n="addCachedModel">添加到画布</button>
+            <button id="deleteCachedBtn" class="danger-ghost" type="button" data-i18n="deleteCachedModel">删除缓存</button>
+          </div>
+          <div id="cacheStatus" class="batch-status" role="status" aria-live="polite"></div>
+        </section>
+        <form id="modelForm">
+          <section class="form-section identity-section">
+            <div class="section-heading">
+              <div><span class="step">01</span><h2 data-i18n="materialHeight">材料与高度</h2></div>
+              <span class="unit-pill">cm</span>
+            </div>
+            <label class="wide-field"><span class="label-title" data-i18n="materialName">材料名称</span>
+              <input id="taxa" name="taxa" type="text" value="Virtual wheat 01" maxlength="60" />
+            </label>
+            <div class="field-grid three">
+              <label>PH <span data-i18n="phHelp">整株最高点</span><input id="ph" name="ph" type="number" min="20" max="300" step="0.1" value="145" required /></label>
+              <label>HSH <span data-i18n="hshHelp">最高穗基部</span><input id="hsh" name="hsh" type="number" min="0" max="300" step="0.1" value="132" required /></label>
+              <label>LSH <span data-i18n="lshHelp">最低穗基部</span><input id="lsh" name="lsh" type="number" min="0" max="300" step="0.1" value="62" required /></label>
+            </div>
+            <div id="validation" class="validation" role="status" aria-live="polite"></div>
+          </section>
+
+          <section class="form-section">
+            <div class="section-heading">
+              <div><span class="step">02</span><h2 data-i18n="threeBelts">三段穗带</h2></div>
+              <span class="unit-pill" data-i18n="countCm">穗数 / cm</span>
+            </div>
+            <p class="section-note" data-i18n="beltHelp">穗层按高度等分；穗数控制成穗分蘖数量，穗长按各带均值为中心、±20% 为界的截断正态分布生成。</p>
+            <div class="belt-inputs">
+              <div class="belt-row top">
+                <div class="belt-name"><i></i><strong>TSB</strong><span data-i18n="top">上部</span></div>
+                <label><span class="label-title" data-i18n="spikeCount">穗数</span><input id="tsbSn" type="number" min="0" max="120" step="1" value="25" /></label>
+                <label><span class="label-title" data-i18n="spikeLength">穗长</span><input id="tsbL" type="number" min="1" max="40" step="0.1" value="11.5" /></label>
+              </div>
+              <div class="belt-row middle">
+                <div class="belt-name"><i></i><strong>MSB</strong><span data-i18n="middle">中部</span></div>
+                <label><span class="label-title" data-i18n="spikeCount">穗数</span><input id="msbSn" type="number" min="0" max="120" step="1" value="15" /></label>
+                <label><span class="label-title" data-i18n="spikeLength">穗长</span><input id="msbL" type="number" min="1" max="40" step="0.1" value="10.3" /></label>
+              </div>
+              <div class="belt-row bottom">
+                <div class="belt-name"><i></i><strong>BSB</strong><span data-i18n="bottom">下部</span></div>
+                <label><span class="label-title" data-i18n="spikeCount">穗数</span><input id="bsbSn" type="number" min="0" max="120" step="1" value="7" /></label>
+                <label><span class="label-title" data-i18n="spikeLength">穗长</span><input id="bsbL" type="number" min="1" max="40" step="0.1" value="8.4" /></label>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section compact-section">
+            <div class="section-heading">
+              <div><span class="step">03</span><h2 data-i18n="displaySettings">画面设置</h2></div>
+            </div>
+            <div class="field-grid two">
+              <label><span class="label-title" data-i18n="shapeSeed">形态种子</span><input id="seed" type="number" min="1" max="999999" step="1" value="2025" /></label>
+              <label><span class="label-title" data-i18n="canvasRatio">画布比例</span><select id="canvasPreset"><option value="16:9">16:9</option><option value="4:3">4:3</option><option value="custom" data-i18n="customRatio">自定义</option></select></label>
+            </div>
+            <div class="dimension-grid">
+              <label><span class="label-title" data-i18n="canvasWidth">画布宽度 (px)</span><input id="canvasWidth" type="number" min="480" max="8000" step="1" value="1600" disabled /></label>
+              <label><span class="label-title" data-i18n="canvasHeight">画布高度 (px)</span><input id="canvasHeight" type="number" min="360" max="8000" step="1" value="900" disabled /></label>
+            </div>
+            <p class="section-note dimension-note" data-i18n="canvasSizeHelp">选择“自定义”后可直接修改画布宽度和高度；植株不会被拉伸。</p>
+            <div class="resolution-settings">
+              <label><span class="label-title" data-i18n="pngResolution">PNG 清晰度</span><select id="pngPreset"><option value="canvas" data-i18n="sameAsCanvas">与画布一致</option><option value="1920">1920 px</option><option value="2560">2560 px</option><option value="3840">3840 px</option><option value="custom" data-i18n="customPixels">自定义 px</option></select></label>
+              <div class="dimension-grid">
+                <label><span class="label-title" data-i18n="pngWidth">PNG 宽度 (px)</span><input id="pngWidth" type="number" min="480" max="8000" step="1" value="1600" disabled /></label>
+                <label><span class="label-title" data-i18n="pngHeight">PNG 高度 (px)</span><input id="pngHeight" type="number" min="360" max="8000" step="1" value="900" disabled /></label>
+              </div>
+              <output id="pngSizeOutput" class="pixel-output">1600 × 900 px</output>
+            </div>
+            <label class="range-field"><span class="label-title" data-i18n="tillerSpread">分蘖展开度</span><output id="spreadOutput">58%</output><input id="spread" type="range" min="20" max="92" step="1" value="58" /></label>
+            <label class="check-field"><input id="showBelts" type="checkbox" checked /><span data-i18n="showBelts">显示穗带背景与边界</span></label>
+          </section>
+        </form>
+
+        <section class="batch-panel">
+          <div class="section-heading">
+            <div><span class="step">04</span><h2 data-i18n="batchData">批量数据</h2></div>
+            <button id="templateBtn" class="text-button" type="button" data-i18n="downloadTemplate">下载模板</button>
+          </div>
+          <label class="file-drop" for="csvInput">
+            <input id="csvInput" type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" />
+            <strong data-i18n="importData">导入 CSV / TSV</strong>
+            <span data-i18n="supportsColumns">支持 SLU2025 风格列名</span>
+          </label>
+          <div id="batchStatus" class="batch-status"></div>
+          <div id="batchControls" class="batch-controls" hidden>
+            <label><span class="label-title" data-i18n="currentMaterial">当前材料</span><select id="batchSelect"></select></label>
+            <div class="batch-nav"><button id="prevBtn" type="button" data-i18n="previousRow">上一条</button><button id="nextBtn" type="button" data-i18n="nextRow">下一条</button></div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="preview-panel">
+        <div class="preview-toolbar">
+          <div>
+            <span class="status-dot"></span>
+            <span id="previewStatus" data-i18n="livePreview">实时预览</span>
+          </div>
+          <div class="export-actions">
+            <button id="downloadCurrentSvgBtn" class="ghost" type="button" data-i18n="currentSvg">当前株 SVG</button>
+            <button id="downloadCurrentPngBtn" class="ghost" type="button" data-i18n="currentPng">当前株 PNG</button>
+            <button id="downloadAllSvgBtn" class="ghost" type="button" data-i18n="allSvg">全部合并 SVG</button>
+            <button id="downloadAllPngBtn" class="primary" type="button" data-i18n="allPng">全部合并 PNG</button>
+          </div>
+        </div>
+        <details class="figure-text-editor" open>
+          <summary><span data-i18n="figureTextEditor">图中文字</span><small data-i18n="figureTextHint">修改后实时更新预览与导出图片</small></summary>
+          <div class="figure-text-body">
+            <p class="section-note text-editor-note" data-i18n="figureTextPlaceholders">标题/副标题可使用 {name}、{ph}、{hsh}、{lsh}、{spikes}、{belt}、{seed} 和 {current}；字体保持 Times New Roman。</p>
+            <div class="figure-text-grid two-wide">
+              <label><span class="label-title" data-i18n="titleTemplate">标题内容</span><input id="figureTitleTemplate" type="text" maxlength="160" value="{name}" /></label>
+              <label><span class="label-title" data-i18n="subtitleTemplate">副标题内容</span><input id="figureSubtitleTemplate" type="text" maxlength="240" value="SINGLE WHEAT INDIVIDUAL · {spikes} FERTILE TILLERS · DOMINANT {belt} · SEED {seed}" /></label>
+              <label><span class="label-title" data-i18n="axisTitleText">纵轴标题</span><input id="axisTitleText" type="text" maxlength="80" value="Height (cm)" /></label>
+              <label><span class="label-title" data-i18n="noteText">底部说明</span><input id="figureNoteText" type="text" maxlength="200" value="Shared crown · segmented culms · truncated-normal spike length" /></label>
+            </div>
+            <div class="figure-text-grid six-labels">
+              <label><span class="label-title">TSB</span><input id="tsbText" type="text" maxlength="24" value="TSB" /></label>
+              <label><span class="label-title">MSB</span><input id="msbText" type="text" maxlength="24" value="MSB" /></label>
+              <label><span class="label-title">BSB</span><input id="bsbText" type="text" maxlength="24" value="BSB" /></label>
+              <label><span class="label-title">PH</span><input id="phText" type="text" maxlength="24" value="PH" /></label>
+              <label><span class="label-title">HSH</span><input id="hshText" type="text" maxlength="24" value="HSH" /></label>
+              <label><span class="label-title">LSH</span><input id="lshText" type="text" maxlength="24" value="LSH" /></label>
+            </div>
+            <div class="figure-font-grid">
+              <label><span class="label-title" data-i18n="titleSize">标题字号</span><input id="titleFontSize" type="number" min="6" max="72" step="1" value="22" /></label>
+              <label><span class="label-title" data-i18n="subtitleSize">副标题字号</span><input id="subtitleFontSize" type="number" min="6" max="72" step="1" value="10" /></label>
+              <label><span class="label-title" data-i18n="axisTitleSize">轴标题字号</span><input id="axisTitleFontSize" type="number" min="6" max="72" step="1" value="12" /></label>
+              <label><span class="label-title" data-i18n="axisTickSize">刻度字号</span><input id="axisTickFontSize" type="number" min="6" max="72" step="1" value="11" /></label>
+              <label><span class="label-title" data-i18n="beltSize">SB 图注字号</span><input id="beltFontSize" type="number" min="6" max="72" step="1" value="11" /></label>
+              <label><span class="label-title" data-i18n="markerSize">PH/HSH/LSH 字号</span><input id="markerFontSize" type="number" min="6" max="72" step="1" value="10" /></label>
+              <label><span class="label-title" data-i18n="noteSize">说明字号</span><input id="noteFontSize" type="number" min="6" max="72" step="1" value="9" /></label>
+              <button id="resetFigureTextBtn" class="ghost text-reset-button" type="button" data-i18n="resetFigureText">恢复文字默认值</button>
+            </div>
+          </div>
+        </details>
+        <div class="preview-canvas">
+          <div id="svgMount" class="svg-mount" aria-label="卡通小麦预览"></div>
+          <button id="addPlantBtn" class="add-plant-button" type="button" aria-label="在同一坐标中新增一株小麦" title="新增一株小麦">+</button>
+        </div>
+        <div class="trait-strip">
+          <div><span>SL</span><strong id="slMetric">70.0 cm</strong></div>
+          <div><span>SLrate</span><strong id="slrateMetric">0.530</strong></div>
+          <div><span data-i18n="totalSpikes">总穗数</span><strong id="snMetric">47</strong></div>
+          <div><span data-i18n="dominantBelt">主导穗带</span><strong id="dominantMetric">TSB</strong></div>
+        </div>
+      </section>
+    </section>
+
+    <footer>
+      <span data-i18n="footerRepeat">同一组数据 + 同一种子 = 同一幅图</span>
+      <span data-i18n="footerStructure">每个成穗分蘖顶生一个穗；全部分蘖共享同一冠部和根系</span>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
